@@ -1,5 +1,8 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Permission
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
 
 class User(AbstractUser):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
@@ -25,3 +28,19 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+@receiver(post_migrate)
+def create_manager_permission(sender, **kwargs):
+    # Only run this when migrating the authentication app
+    if sender.name != 'authentication':
+        return
+        
+    # Get the content type for our custom User model
+    content_type = ContentType.objects.get_for_model(User)
+    
+    # Create the permission if it doesn't exist
+    Permission.objects.get_or_create(
+        codename='is_manager',
+        name='Is Manager User',
+        content_type=content_type,
+    )
